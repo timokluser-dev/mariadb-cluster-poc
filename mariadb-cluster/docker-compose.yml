@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  mariadb-cluster:
+    image: mariadb:11
+    command:
+      [
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci",
+      ]
+    environment:
+      MARIADB_ROOT_PASSWORD: "${MARIADB_ROOT_PASSWORD}"
+    volumes:
+      - mariadb-cluster-data:/var/lib/mysql
+    ports:
+      # for access outside the docker network
+      - "${LISTENING_IP}:3306:3306"
+    networks:
+      - mariadb-cluster-data-net
+      - public
+    hostname: mariadb-cluster
+    container_name: mariadb-cluster
+    restart: always
+
+volumes:
+  mariadb-cluster-data:
+
+networks:
+  mariadb-cluster-data-net:
+    external: true
+  public:
+    internal: false

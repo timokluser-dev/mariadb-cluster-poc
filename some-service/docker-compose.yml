@@ -1,0 +1,54 @@
+version: "3.8"
+
+services:
+  phpmyadmin:
+    image: phpmyadmin:latest
+    environment:
+      PMA_HOST: "mariadb-cluster" # same as hostname from mariadb-cluster container
+      PMA_PORT: 3306 # default
+    ports:
+      - "8080:80"
+    networks:
+      - mariadb-cluster-data-net
+      - public
+    depends_on:
+      wait-for-database:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # this container will try to connect to the database and exits as soon as the connection is possible
+  wait-for-database:
+    image: wait-for-database:dev
+    build:
+      dockerfile: wait-for-database.Dockerfile
+      context: .
+      network: host
+    command:
+      - bash
+      - "-c"
+      - |-
+        while true; do
+          mysql -h "$$DB_HOST" -u "$$DB_USER" -p"$$DB_PASSWORD" -e "USE $$DB_NAME;";
+          if [ $? -eq 0 ]; then
+            echo "-> Database is ready to connect.";
+            exit 0
+          else
+            echo "-> Failed to connect to the database. Retrying in $$TIMEOUT seconds...";
+            sleep $$TIMEOUT;
+          fi
+        done;
+    environment:
+      TIMEOUT: 5
+      DB_HOST:
+      DB_USER:
+      DB_PASSWORD:
+      DB_NAME:
+    networks:
+      - mariadb-cluster-data-net
+    restart: "no"
+
+networks:
+  mariadb-cluster-data-net:
+    external: true
+  public: # one non internal network is needed in order to expose the ports
+    internal: false
